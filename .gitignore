@@ -1,0 +1,49 @@
+gitignore
+# Created by .ignore support tool (for Android Studio)
+# JetBrains-specific files and directories
+.idea/
+*.iml
+
+# Gradle files
+.gradle/
+build/
+
+# Local configuration file (contains SDK path and other sensitive info)
+local.properties
+
+# Log files
+*.log
+
+# Keystore files (NEVER commit these to a public repository)
+*.jks
+*.keystore
+
+# Google Services (uncomment if you have sensitive API keys)
+# google-services.json
+
+# Android build-related files
+captures/
+.cxx/
+*.apk
+*.aab
+output/
+
+# Dependency-specific files
+/google-services/
+
+# Native libraries
+/libs/*/lib*.so
+/obj/
+/libs/armeabi-v7a/
+/libs/arm64-v8a/
+/libs/x86/
+/libs/x86_64/
+
+# Operating System generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
