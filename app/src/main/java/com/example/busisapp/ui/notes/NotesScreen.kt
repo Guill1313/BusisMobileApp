@@ -305,6 +305,7 @@ fun NoteCard(
 
     val isCreator = note.creatorID == currentUser?.userID
     val canRead = !note.is_read && isForMe && !isCreator
+    val canDelete = currentUser?.role == "manager" || isCreator
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -349,7 +350,9 @@ fun NoteCard(
                     TextButton(onClick = onReadClick) { Text("Read", color = Color(0xFF0056b3)) }
                 }
                 TextButton(onClick = onEditClick) { Text("Edit", color = Color.DarkGray) }
-                TextButton(onClick = onDeleteClick) { Text("Delete", color = Color(0xFFB30000)) }
+                if (canDelete) {
+                    TextButton(onClick = onDeleteClick) { Text("Delete", color = Color(0xFFB30000)) }
+                }
             }
         }
     }
