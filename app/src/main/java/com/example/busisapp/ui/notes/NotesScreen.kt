@@ -349,7 +349,9 @@ fun NoteCard(
                 if (canRead) {
                     TextButton(onClick = onReadClick) { Text("Read", color = Color(0xFF0056b3)) }
                 }
-                TextButton(onClick = onEditClick) { Text("Edit", color = Color.DarkGray) }
+                if (isCreator) {
+                    TextButton(onClick = onEditClick) { Text("Edit", color = Color.DarkGray) }
+                }
                 if (canDelete) {
                     TextButton(onClick = onDeleteClick) { Text("Delete", color = Color(0xFFB30000)) }
                 }
