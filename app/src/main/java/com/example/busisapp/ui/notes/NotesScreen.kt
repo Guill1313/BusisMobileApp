@@ -37,6 +37,7 @@ import kotlinx.coroutines.delay
 import java.text.SimpleDateFormat
 import java.util.Locale
 import java.util.TimeZone
+import androidx.compose.runtime.saveable.rememberSaveable
 
 /**
  * Composable function for the Notes screen.
@@ -62,16 +63,16 @@ fun NotesScreen(
 
     val currentUser = viewModel.currentUser
 
-    var noteText by remember { mutableStateOf("") }
-    var selectedCar by remember { mutableStateOf<CarDto?>(null) }
-    var selectedDriver by remember { mutableStateOf<DriverDto?>(null) }
-    var selectedJourney by remember { mutableStateOf<JourneyDto?>(null) }
+    val noteText by viewModel.noteText.collectAsState()
+    val selectedCar by viewModel.selectedCar.collectAsState()
+    val selectedDriver by viewModel.selectedDriver.collectAsState()
+    val selectedJourney by viewModel.selectedJourney.collectAsState()
 
     var noteToDelete by remember { mutableStateOf<NoteDto?>(null) }
     var noteToEdit by remember { mutableStateOf<NoteDto?>(null) }
 
     // Debounce for text filtering
-    var debouncedText by remember { mutableStateOf("") }
+    var debouncedText by rememberSaveable { mutableStateOf("") }
     LaunchedEffect(noteText) {
         delay(500)
         debouncedText = noteText
@@ -155,7 +156,7 @@ fun NotesScreen(
 
                                 OutlinedTextField(
                                     value = noteText,
-                                    onValueChange = { noteText = it },
+                                    onValueChange = { viewModel.updateNoteText(it) }, // <-- Updated!
                                     label = { Text("Note Text / Search") },
                                     modifier = Modifier.fillMaxWidth().height(100.dp),
                                     maxLines = 4
@@ -163,19 +164,16 @@ fun NotesScreen(
 
                                 Spacer(modifier = Modifier.height(8.dp))
 
-                                CarDropdown(cars, selectedCar) { selectedCar = it }
+                                CarDropdown(cars, selectedCar) { viewModel.updateSelectedCar(it) }
                                 Spacer(modifier = Modifier.height(8.dp))
-                                DriverDropdown(drivers, selectedDriver) { selectedDriver = it }
+                                DriverDropdown(drivers, selectedDriver) { viewModel.updateSelectedDriver(it) }
                                 Spacer(modifier = Modifier.height(8.dp))
-                                JourneyDropdown(journeys, selectedJourney) { selectedJourney = it }
+                                JourneyDropdown(journeys, selectedJourney) { viewModel.updateSelectedJourney(it) }
 
                                 Spacer(modifier = Modifier.height(16.dp))
 
                                 Button(
-                                    onClick = {
-                                        viewModel.createNote(noteText, selectedDriver?.userID, selectedCar?.carID, selectedJourney?.journeyID)
-                                        noteText = ""; selectedCar = null; selectedDriver = null; selectedJourney = null
-                                    },
+                                    onClick = { viewModel.createNote() },
                                     modifier = Modifier.fillMaxWidth(),
                                     enabled = noteText.isNotBlank()
                                 ) { Text("Save Note") }

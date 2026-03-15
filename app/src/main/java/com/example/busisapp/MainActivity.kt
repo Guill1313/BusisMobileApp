@@ -4,12 +4,6 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.ProcessLifecycleOwner
@@ -57,26 +51,8 @@ class MainActivity : ComponentActivity() {
         setContent {
             BusisAppTheme {
                 val navController = rememberNavController()
-
-                // null means currently loading/checking the DataStore
-                var startDestination by remember { mutableStateOf<String?>(null) }
-
-                LaunchedEffect(Unit) {
-                    startDestination = if (sessionManager.isSessionValid()) {
-                        "notes"
-                    } else {
-                        "login"
-                    }
-                }
-
-                if (startDestination == null) {
-                    // Show a loading spinner while checking DataStore
-                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator()
-                    }
-                } else {
                     // Define Navigation Graph
-                    NavHost(navController = navController, startDestination = startDestination!!) {
+                NavHost(navController = navController, startDestination = "login") {
 
                         /**
                          * Navigate to notes and pop "login" off the backstack
@@ -100,12 +76,12 @@ class MainActivity : ComponentActivity() {
                         composable("notes") {
                             NotesScreen(
                                 onLogout = {
-                                navController.navigate("login") {
-                                    popUpTo(0) { inclusive = true }
+                                    navController.navigate("login") {
+                                        popUpTo(0) { inclusive = true }
+                                    }
                                 }
-                            })
+                            )
                         }
-                    }
                 }
             }
         }

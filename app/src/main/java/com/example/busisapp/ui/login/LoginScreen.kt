@@ -31,6 +31,8 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.compose.foundation.layout.Box
+import androidx.compose.runtime.LaunchedEffect
 
 /**
  * Composable function for the Login screen.
@@ -50,81 +52,98 @@ fun LoginScreen(
     val password by viewModel.password.collectAsState()
     val errorMessage by viewModel.errorMessage.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
+    val isCheckingSession by viewModel.isCheckingSession.collectAsState()
+    val navigateToNotes by viewModel.navigateToNotes.collectAsState()
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
-        // Logo
-        Image(
-            painter = painterResource(id = R.drawable.icon),
-            contentDescription = "App Logo",
-            modifier = Modifier.size(100.dp)
-        )
-
-        Spacer(modifier = Modifier.height(32.dp))
-
-        // Username Field
-        OutlinedTextField(
-            value = username,
-            onValueChange = { viewModel.onUsernameChange(it) },
-            label = { Text("Username") },
-            leadingIcon = { Icon(Icons.Default.Person, contentDescription = null) },
-            singleLine = true,
-            modifier = Modifier.fillMaxWidth()
-        )
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        // Password Field
-        OutlinedTextField(
-            value = password,
-            onValueChange = { viewModel.onPasswordChange(it) },
-            label = { Text("Password") },
-            leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null) },
-            singleLine = true,
-            visualTransformation = PasswordVisualTransformation(),
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-            modifier = Modifier.fillMaxWidth()
-        )
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        // Error Message Display (Red Text)
-        if (errorMessage != null) {
-            Text(
-                text = errorMessage!!,
-                color = Color.Red,
-                style = MaterialTheme.typography.bodyMedium,
-                modifier = Modifier.align(Alignment.Start)
-            )
+    // Automatic navigation if the token is valid
+    LaunchedEffect(navigateToNotes) {
+        if (navigateToNotes) {
+            onNavigateToNotes()
         }
+    }
 
-        Spacer(modifier = Modifier.height(24.dp))
-
-        // Login Button
-        Button(
-            onClick = {
-                viewModel.login(
-                    onSuccess = {
-                        // The token is now saved internally by the ViewModel and SessionManager
-                        onNavigateToNotes()
-                    }
-                )
-            },
-            modifier = Modifier.fillMaxWidth().height(50.dp),
-            enabled = !isLoading
+    // If the token is being verified show a loading spinner
+    if (isCheckingSession) {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            CircularProgressIndicator()
+        }
+    } else {
+        // Else display the form for login
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
         ) {
-            if (isLoading) {
-                CircularProgressIndicator(
-                    modifier = Modifier.size(24.dp),
-                    color = MaterialTheme.colorScheme.onPrimary
+            // Logo
+            Image(
+                painter = painterResource(id = R.drawable.icon),
+                contentDescription = "App Logo",
+                modifier = Modifier.size(100.dp)
+            )
+
+            Spacer(modifier = Modifier.height(32.dp))
+
+            // Username Field
+            OutlinedTextField(
+                value = username,
+                onValueChange = { viewModel.onUsernameChange(it) },
+                label = { Text("Username") },
+                leadingIcon = { Icon(Icons.Default.Person, contentDescription = null) },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Password Field
+            OutlinedTextField(
+                value = password,
+                onValueChange = { viewModel.onPasswordChange(it) },
+                label = { Text("Password") },
+                leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null) },
+                singleLine = true,
+                visualTransformation = PasswordVisualTransformation(),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Error Message Display (Red Text)
+            if (errorMessage != null) {
+                Text(
+                    text = errorMessage!!,
+                    color = Color.Red,
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.align(Alignment.Start)
                 )
-            } else {
-                Text("Login")
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // Login Button
+            Button(
+                onClick = {
+                    viewModel.login(
+                        onSuccess = {
+                            // The token is now saved internally by the ViewModel and SessionManager
+                            onNavigateToNotes()
+                        }
+                    )
+                },
+                modifier = Modifier.fillMaxWidth().height(50.dp),
+                enabled = !isLoading
+            ) {
+                if (isLoading) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(24.dp),
+                        color = MaterialTheme.colorScheme.onPrimary
+                    )
+                } else {
+                    Text("Login")
+                }
             }
         }
     }

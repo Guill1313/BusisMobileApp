@@ -2,6 +2,10 @@ package com.example.busisapp.di
 
 import android.content.Context
 import com.example.busisapp.data.ApiService
+import com.example.busisapp.data.AuthRepository
+import com.example.busisapp.data.AuthRepositoryImpl
+import com.example.busisapp.data.NotesRepository
+import com.example.busisapp.data.NotesRepositoryImpl
 import com.example.busisapp.data.RetrofitClient
 import com.example.busisapp.data.SessionManager
 import dagger.Module
@@ -29,5 +33,17 @@ object AppModule {
     @Singleton
     fun provideApiService(): ApiService {
         return RetrofitClient.apiService
+    }
+
+    @Provides
+    @Singleton
+    fun provideAuthRepository(apiService: ApiService, sessionManager: SessionManager): AuthRepository {
+        return AuthRepositoryImpl(apiService, sessionManager)
+    }
+
+    @Provides
+    @Singleton
+    fun provideNotesRepository(apiService: ApiService): NotesRepository {
+        return NotesRepositoryImpl(apiService)
     }
 }

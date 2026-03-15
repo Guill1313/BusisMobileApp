@@ -12,18 +12,20 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+import com.example.busisapp.data.AuthRepository
+import com.example.busisapp.data.NotesRepository
 
 /**
  * ViewModel for the Notes screen with necessary dependencies injected and state handling.
  * Supporting states, API calls, and error handling.
  *
- * @param apiService The injected ApiService for making API requests.
- * @param sessionManager The injected SessionManager for managing user session.
+ * @param notesRepository The injected NotesRepository for managing notes.
+ * @param authRepository The injected AuthRepository for authentication operations.
  */
 @HiltViewModel
 class NotesViewModel @Inject constructor(
-    private val apiService: ApiService,
-    private val sessionManager: SessionManager
+    private val notesRepository: NotesRepository,
+    private val authRepository: AuthRepository
 ) : ViewModel() {
 
     private val _notes = MutableStateFlow<List<NoteDto>>(emptyList())
@@ -50,6 +52,22 @@ class NotesViewModel @Inject constructor(
     var currentUser: UserDto? = null
         private set
 
+    private val _noteText = MutableStateFlow("")
+    val noteText: StateFlow<String> = _noteText.asStateFlow()
+    fun updateNoteText(text: String) { _noteText.value = text }
+
+    private val _selectedCar = MutableStateFlow<CarDto?>(null)
+    val selectedCar: StateFlow<CarDto?> = _selectedCar.asStateFlow()
+    fun updateSelectedCar(car: CarDto?) { _selectedCar.value = car }
+
+    private val _selectedDriver = MutableStateFlow<DriverDto?>(null)
+    val selectedDriver: StateFlow<DriverDto?> = _selectedDriver.asStateFlow()
+    fun updateSelectedDriver(driver: DriverDto?) { _selectedDriver.value = driver }
+
+    private val _selectedJourney = MutableStateFlow<JourneyDto?>(null)
+    val selectedJourney: StateFlow<JourneyDto?> = _selectedJourney.asStateFlow()
+    fun updateSelectedJourney(journey: JourneyDto?) { _selectedJourney.value = journey }
+
     init {
         loadInitialData()
     }
@@ -61,15 +79,15 @@ class NotesViewModel @Inject constructor(
     fun loadInitialData() {
         viewModelScope.launch {
             _isLoading.value = true
-            currentUser = sessionManager.getUserData()
+            currentUser = authRepository.getUserData()
 
             val user = currentUser
             if (user != null) {
                 try {
                     // dropDownList data
-                    val carsDeferred = async { apiService.getCarsByCompany(user.companyID) }
-                    val driversDeferred = async { apiService.getDriversByCompany(user.companyID) }
-                    val journeysDeferred = async { apiService.getJourneysByCompany(user.companyID) }
+                    val carsDeferred = async { notesRepository.getCarsByCompany(user.companyID) }
+                    val driversDeferred = async { notesRepository.getDriversByCompany(user.companyID) }
+                    val journeysDeferred = async { notesRepository.getJourneysByCompany(user.companyID) }
 
                     _cars.value = carsDeferred.await().cars
                     _drivers.value = driversDeferred.await().drivers
@@ -97,10 +115,10 @@ class NotesViewModel @Inject constructor(
             try {
                 // difference in roles, decision made app-wise, normally would be made in backend
                 if (user.role == "manager") {
-                    _notes.value = apiService.getNotesByCompany(user.companyID).notes
+                    _notes.value = notesRepository.getNotesByCompany(user.companyID).notes
                 } else if (user.role == "driver") {
-                    val createdNotes = apiService.getNotesByCreator(user.userID).notes
-                    val targetedNotes = apiService.getNotesByTarget(user.userID).notes
+                    val createdNotes = notesRepository.getNotesByCreator(user.userID).notes
+                    val targetedNotes = notesRepository.getNotesByTarget(user.userID).notes
 
                     _notes.value = (createdNotes + targetedNotes)
                         .distinctBy { it.noteID }
@@ -116,18 +134,28 @@ class NotesViewModel @Inject constructor(
 
     /**
      * Creates a new note with the given parameters.
+     * Parameter-less as ViewModel holds the states.
      *
-     * @param text The text content of the note.
-     * @param targetID The ID of the target user for the note (nullable).
-     * @param carID The ID of the car associated with the note (nullable).
-     * @param journeyID The ID of the journey associated with the note (nullable).
      */
-    fun createNote(text: String, targetID: Int?, carID: Int?, journeyID: Int?) {
+    fun createNote() {
         val user = currentUser ?: return
         viewModelScope.launch {
             try {
-                val req = CreateNoteRequest(user.companyID.toInt(), user.userID, targetID, carID, journeyID, text)
-                if (apiService.createNote(req).status == "success") {
+                val req = CreateNoteRequest(
+                    companyID = user.companyID.toInt(),
+                    creatorID = user.userID,
+                    targetID = _selectedDriver.value?.userID,
+                    carID = _selectedCar.value?.carID,
+                    journeyID = _selectedJourney.value?.journeyID,
+                    text = _noteText.value
+                )
+                if (notesRepository.createNote(req).status == "success") {
+                    // Clear the form after successful creation
+                    _noteText.value = ""
+                    _selectedCar.value = null
+                    _selectedDriver.value = null
+                    _selectedJourney.value = null
+
                     refreshNotes()
                 } else {
                     _errorEvents.send("Failed to create note on the server.")
@@ -146,7 +174,7 @@ class NotesViewModel @Inject constructor(
     fun markAsRead(noteID: Int) {
         viewModelScope.launch {
             try {
-                if (apiService.markAsRead(noteID).status == "success") refreshNotes()
+                if (notesRepository.markAsRead(noteID).status == "success") refreshNotes()
             } catch (_: Exception) {
                 _errorEvents.send("Failed to mark note as read.")
             }
@@ -161,7 +189,7 @@ class NotesViewModel @Inject constructor(
     fun deleteNote(noteID: Int) {
         viewModelScope.launch {
             try {
-                if (apiService.deleteNote(noteID).status == "success") refreshNotes()
+                if (notesRepository.deleteNote(noteID).status == "success") refreshNotes()
             } catch (_: Exception) {
                 _errorEvents.send("Failed to delete note.")
             }
@@ -182,7 +210,7 @@ class NotesViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 val req = CreateNoteRequest(user.companyID.toInt(), user.userID, targetID, carID, journeyID, text)
-                if (apiService.editNote(noteID, req).status == "success") refreshNotes()
+                if (notesRepository.editNote(noteID, req).status == "success") refreshNotes()
             } catch (_: Exception) {
                 _errorEvents.send("Failed to save edits.")
             }
@@ -196,7 +224,7 @@ class NotesViewModel @Inject constructor(
      */
     fun logout(onComplete: () -> Unit) {
         viewModelScope.launch {
-            sessionManager.clearSession()
+            authRepository.logout()
             onComplete()
         }
     }

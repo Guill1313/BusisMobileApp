@@ -2,26 +2,23 @@ package com.example.busisapp.ui.login
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.busisapp.data.ApiService
 import com.example.busisapp.data.LoginRequest
-import com.example.busisapp.data.SessionManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+import com.example.busisapp.data.AuthRepository
 
 /**
  * ViewModel for the Login screen with necessary dependencies injected and state handling.
  *
- * @param sessionManager The injected SessionManager for managing user session.
- * @param apiService The injected ApiService for making API requests.
+ * @param authRepository The injected AuthRepository for authentication operations.
  */
 @HiltViewModel // Tells Hilt to manage this ViewModel
 class LoginViewModel @Inject constructor(
-    private val sessionManager: SessionManager,
-    private val apiService: ApiService
+    private val authRepository: AuthRepository
 ) : ViewModel() {
 
     private val _username = MutableStateFlow("")
@@ -35,6 +32,23 @@ class LoginViewModel @Inject constructor(
 
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
+
+    private val _isCheckingSession = MutableStateFlow(true)
+    val isCheckingSession: StateFlow<Boolean> = _isCheckingSession.asStateFlow()
+
+    private val _navigateToNotes = MutableStateFlow(false)
+    val navigateToNotes: StateFlow<Boolean> = _navigateToNotes.asStateFlow()
+
+    init {
+        // Check token right at launch
+        viewModelScope.launch {
+            if (authRepository.isSessionValid()) {
+                _navigateToNotes.value = true // Go to Notes
+            } else {
+                _isCheckingSession.value = false // Display the form
+            }
+        }
+    }
 
     fun onUsernameChange(newUsername: String) {
         _username.value = newUsername
@@ -63,10 +77,10 @@ class LoginViewModel @Inject constructor(
             _errorMessage.value = null
 
             try {
-                val response = apiService.login(LoginRequest(currentUsername, currentPassword))
+                val response = authRepository.login(LoginRequest(currentUsername, currentPassword))
 
                 if (response.status == "success" && response.token != null) {
-                    sessionManager.saveToken(response.token)
+                    authRepository.saveToken(response.token)
                     onSuccess()
                 } else {
                     _errorMessage.value = response.message
